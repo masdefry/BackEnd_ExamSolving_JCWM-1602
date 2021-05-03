@@ -56,18 +56,18 @@ const register = async(req, res) => {
         console.log(dataToSend)
         
         const insertData = await query(query2, dataToSend)
-        // .catch((error) => {
-        //     error.status = 500
-        //     error.detail = 'Error Server'
-        //     throw error
-        // })
+        .catch((error) => {
+            error.status = 500
+            error.detail = 'Error Server'
+            throw error
+        })
 
         const getDataUser = await query(query3, insertData.insertId)
-        // .catch((error) => {
-        //     error.status = 500
-        //     error.detail = 'Error Server'
-        //     throw error
-        // })
+        .catch((error) => {
+            error.status = 500
+            error.detail = 'Error Server'
+            throw error
+        })
 
         const token = jwtSign(getDataUser)
         
