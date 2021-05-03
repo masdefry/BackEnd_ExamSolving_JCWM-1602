@@ -52,8 +52,6 @@ const register = async(req, res) => {
             uid: Date.now(),
             ...data
         }
-
-        console.log(dataToSend)
         
         const insertData = await query(query2, dataToSend)
         .catch((error) => {
@@ -109,7 +107,7 @@ const login = (req, res) => {
             query = 'SELECT * FROM users WHERE username = ? AND password = ?'
         }
 
-        db.query(query, [data.usernameEmail, data.password], (err, result) => {
+        db.query(query + ' AND status = 1', [data.usernameEmail, data.password], (err, result) => {
             try {
                 if(err) throw err
 
@@ -160,8 +158,113 @@ const login = (req, res) => {
     }
 }
 
+const deactive = (req, res) => {
+    const data = req.dataToken
+
+    db.query('SELECT * FROM users WHERE uid = ? AND status = 1', data.uid, (err, result) => {
+        try {
+            if(err) throw err
+
+            if(result.length === 0) return res.status(200).send({error: true, detail: 'Error When Deactive Account', message: 'Your Account Already Deactive Or Closed'})
+            
+            db.query('UPDATE users SET status = 2 WHERE uid = ?', data.uid, (err, result) => {
+                try {
+                    if(err) throw err
+
+                    db.query('SELECT u.uid, s.status FROM users u JOIN status s ON s.id = u.status WHERE uid = ?;', data.uid, (err, result) => {
+                        try {
+                            if(err) throw err
+
+                            res.status(200).send({
+                                error: false,
+                                detail: 'Deactive Succes',
+                                data: {
+                                    uid: result[0].uid,
+                                    status: result[0].status
+                                }
+                            })
+                        } catch (error) {
+                            res.status(500).send({
+                                error: true,
+                                detail: 'Error Server',
+                                message: error.message
+                            })
+                        }
+                    })
+                } catch (error) {
+                    res.status(500).send({
+                        error: true,
+                        detail: 'Error Server',
+                        message: error.message
+                    })
+                }
+            })
+        } catch (error) {
+            res.status(500).send({
+                error: true,
+                detail: 'Error Server',
+                message: error.message
+            })
+        }
+    })
+}
+
+const searchData = (req, res) => {
+    let data = req.query
+
+    try {
+        
+        let mainQuery = `SELECT name, release_date, release_month, release_year, duration_min, genre, description, ms.status, l.location, st.time FROM movies m JOIN
+        movie_status ms ON ms.id = m.status JOIN
+        schedules s ON s.movie_id = m.id JOIN
+        locations l ON l.id = s.location_id JOIN
+        show_times st ON st.id = s.time_id WHERE ms.status != 'has shown'`
+
+        if(data.status){
+            var status = data.status.replace('%', ' ')
+            mainQuery += ` AND ms.status = "${status}" `
+        }
+        if(data.time){
+            var time = data.time.replace('%', ' ')
+            mainQuery += ` AND st.time = "${time}" `
+        }
+        if(data.location){
+            var location = data.location
+            mainQuery += ` AND l.location = "${location}" `
+        }
+
+        db.query(mainQuery, (err, result) => {
+            try {
+                if(err) throw err
+
+                res.status(200).send({
+                    error: false,
+                    detail: 'Search Success',
+                    data: result
+                })
+            } catch (error) {
+                console.log(error)
+            }
+        })
+    } catch (error) {
+        res.status(406).send({
+            error: true,
+            detail: 'Error Validation',
+            message: error.message
+        })
+    }
+}
+
 module.exports = {
     register: register,
-    login: login
-
+    login: login,
+    deactive: deactive,
+    searchData: searchData
 }
+
+// Join Table 2.1
+// SELECT name, release_date, release_month, release_year, duration_min, genre, description, ms.status, l.location, st.time FROM movies m JOIN
+// movie_status ms ON ms.id = m.status JOIN
+// schedules s ON s.movie_id = m.id JOIN
+// locations l ON l.id = s.location_id JOIN
+// show_times st ON st.id = s.time_id;

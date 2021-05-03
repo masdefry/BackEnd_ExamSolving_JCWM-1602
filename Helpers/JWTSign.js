@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken')
 require('dotenv').config()
 
 const jwtSign = (data) => {
+    console.log(data)
     return jwt.sign({uid: data[0].uid, role: data[0].role}, process.env.JWT_SECRETKEY)
 }
 
